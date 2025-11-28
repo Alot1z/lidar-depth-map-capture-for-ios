@@ -21,7 +21,7 @@ env:
   BUNDLE_IDENTIFIER: 'dev.iori.depthcamera0'
   MARKETING_VERSION: '1.1'
   SCHEME_NAME: 'DepthCamera'
-  PROJECT_DIR: 'lidar-depth-map-capture-for-ios'
+  PROJECT_DIR: 'lidar-depth-map-capture-for-ios/lidar-depth-map-capture-for-ios'
   WORKSPACE_NAME: 'DepthCamera.xcworkspace'
   PROJECT_NAME: 'DepthCamera.xcodeproj'
 
