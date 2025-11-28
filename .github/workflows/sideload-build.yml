@@ -21,6 +21,9 @@ env:
   BUNDLE_IDENTIFIER: 'dev.iori.depthcamera0'
   MARKETING_VERSION: '1.1'
   SCHEME_NAME: 'DepthCamera'
+  WORKSPACE_PATH: 'lidar-depth-map-capture-for-ios/DepthCamera.xcworkspace'
+  PROJECT_PATH: 'lidar-depth-map-capture-for-ios/DepthCamera.xcodeproj'
+  PROJECT_DIR: 'lidar-depth-map-capture-for-ios'
 
 jobs:
   # Build Normal Sideload IPA
@@ -55,7 +58,8 @@ jobs:
 
     - name: Install CocoaPods Dependencies
       run: |
-        echo "Installing CocoaPods dependencies..."
+        echo "🔧 Installing CocoaPods dependencies in ${{ env.PROJECT_DIR }}..."
+        cd ${{ env.PROJECT_DIR }}
         pod install --repo-update
         echo "✅ CocoaPods installed successfully"
 
@@ -64,17 +68,18 @@ jobs:
         echo "🔍 Verifying project structure..."
         echo "Current directory: $(pwd)"
         echo ""
-        echo "Root directory contents:"
-        ls -la
+        echo "Project directory (${{ env.PROJECT_DIR }}) contents:"
+        ls -la ${{ env.PROJECT_DIR }}/
         echo ""
         echo "Looking for workspace:"
-        find . -name "*.xcworkspace" -type d
+        find ${{ env.PROJECT_DIR }} -name "*.xcworkspace" -type d
         echo ""
         echo "Looking for project:"
-        find . -name "*.xcodeproj" -type d
+        find ${{ env.PROJECT_DIR }} -name "*.xcodeproj" -type d
 
     - name: List Available Schemes
       run: |
+        cd ${{ env.PROJECT_DIR }}
         echo "📋 Listing available schemes..."
         if [ -f "DepthCamera.xcworkspace" ]; then
           echo "✅ Using workspace: DepthCamera.xcworkspace"
@@ -83,7 +88,7 @@ jobs:
           echo "✅ Using project: DepthCamera.xcodeproj"
           xcodebuild -project DepthCamera.xcodeproj -list
         else
-          echo "❌ No Xcode project or workspace found"
+          echo "❌ No Xcode project or workspace found in ${{ env.PROJECT_DIR }}"
           exit 1
         fi
 
@@ -108,8 +113,11 @@ jobs:
         BUILD_CONFIGURATION="${{ github.event.inputs.build_type || 'Release' }}"
         echo "🔨 Building configuration: $BUILD_CONFIGURATION"
 
-        # Create build directory
-        mkdir -p build
+        # Change to project directory
+        cd ${{ env.PROJECT_DIR }}
+
+        # Create build directory in root
+        mkdir -p ../build
 
         # Determine whether to use workspace or project
         if [ -f "DepthCamera.xcworkspace" ]; then
@@ -119,7 +127,7 @@ jobs:
           echo "📱 Using project: DepthCamera.xcodeproj"
           BUILD_CMD="xcodebuild -project DepthCamera.xcodeproj"
         else
-          echo "❌ No Xcode project or workspace found"
+          echo "❌ No Xcode project or workspace found in ${{ env.PROJECT_DIR }}"
           exit 1
         fi
 
@@ -130,7 +138,7 @@ jobs:
           -scheme ${{ env.SCHEME_NAME }} \
           -configuration $BUILD_CONFIGURATION \
           -destination generic/platform=iOS \
-          -archivePath build/DepthCamera-Sideload.xcarchive \
+          -archivePath ../build/DepthCamera-Sideload.xcarchive \
           archive \
           CODE_SIGN_IDENTITY="" \
           CODE_SIGNING_REQUIRED=NO \

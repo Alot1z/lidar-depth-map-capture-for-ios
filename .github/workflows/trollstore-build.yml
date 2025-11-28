@@ -20,9 +20,10 @@ env:
   BUNDLE_IDENTIFIER: 'dev.iori.depthcamera0'
   MARKETING_VERSION: '1.1'
   SCHEME_NAME: 'DepthCamera'
-  WORKSPACE_NAME: 'DepthCamera.xcworkspace'  # In ROOT directory
-  PROJECT_NAME: 'DepthCamera.xcodeproj'     # In ROOT directory
-  TROLLSTORE_ENTITLEMENTS: 'DepthCamera/DepthCamera-TrollStore.entitlements'
+  WORKSPACE_PATH: 'lidar-depth-map-capture-for-ios/DepthCamera.xcworkspace'  # Correct path
+  PROJECT_PATH: 'lidar-depth-map-capture-for-ios/DepthCamera.xcodeproj'     # Correct path
+  PROJECT_DIR: 'lidar-depth-map-capture-for-ios'
+  TROLLSTORE_ENTITLEMENTS: 'lidar-depth-map-capture-for-ios/DepthCamera/DepthCamera-TrollStore.entitlements'
 
 jobs:
   # Build Unsigned IPA for TrollStore
@@ -57,7 +58,8 @@ jobs:
 
     - name: Install CocoaPods Dependencies
       run: |
-        echo "Installing CocoaPods dependencies..."
+        echo "🔧 Installing CocoaPods dependencies in ${{ env.PROJECT_DIR }}..."
+        cd ${{ env.PROJECT_DIR }}
         pod install --repo-update
         echo "✅ CocoaPods installed successfully"
 
@@ -69,31 +71,29 @@ jobs:
         echo "Root directory contents:"
         ls -la
         echo ""
+        echo "Project directory (${{ env.PROJECT_DIR }}) contents:"
+        ls -la ${{ env.PROJECT_DIR }}/
+        echo ""
         echo "Looking for workspace:"
-        find . -name "*.xcworkspace" -type d
+        find ${{ env.PROJECT_DIR }} -name "*.xcworkspace" -type d
         echo ""
         echo "Looking for project:"
-        find . -name "*.xcodeproj" -type d
+        find ${{ env.PROJECT_DIR }} -name "*.xcodeproj" -type d
         echo ""
         echo "Looking for TrollStore entitlements:"
-        find . -name "*TrollStore*" -type f
-        echo ""
-        echo "DepthCamera directory contents:"
-        ls -la DepthCamera/
+        find ${{ env.PROJECT_DIR }} -name "*TrollStore*" -type f
 
     - name: Check TrollStore Entitlements
       run: |
         if [ -f "${{ env.TROLLSTORE_ENTITLEMENTS }}" ]; then
           echo "✅ TrollStore entitlements found at ${{ env.TROLLSTORE_ENTITLEMENTS }}"
           echo "Entitlements file size: $(wc -c < "${{ env.TROLLSTORE_ENTITLEMENTS }}") bytes"
-          echo "First few lines:"
-          head -10 "${{ env.TROLLSTORE_ENTITLEMENTS }}"
         else
           echo "❌ TrollStore entitlements not found at ${{ env.TROLLSTORE_ENTITLEMENTS }}"
           echo "Searching for entitlements files:"
-          find . -name "*.entitlements" -type f
+          find ${{ env.PROJECT_DIR }} -name "*.entitlements" -type f
           echo "Creating fallback entitlements..."
-          mkdir -p DepthCamera
+          mkdir -p ${{ env.PROJECT_DIR }}/DepthCamera
           cat > "${{ env.TROLLSTORE_ENTITLEMENTS }}" << 'EOF'
         <?xml version="1.0" encoding="UTF-8"?>
         <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
@@ -113,15 +113,16 @@ jobs:
 
     - name: List Available Schemes
       run: |
+        cd ${{ env.PROJECT_DIR }}
         echo "📋 Listing available schemes..."
-        if [ -f "${{ env.WORKSPACE_NAME }}" ]; then
-          echo "✅ Using workspace: ${{ env.WORKSPACE_NAME }}"
-          xcodebuild -workspace ${{ env.WORKSPACE_NAME }} -list
-        elif [ -f "${{ env.PROJECT_NAME }}" ]; then
-          echo "✅ Using project: ${{ env.PROJECT_NAME }}"
-          xcodebuild -project ${{ env.PROJECT_NAME }} -list
+        if [ -f "DepthCamera.xcworkspace" ]; then
+          echo "✅ Using workspace: DepthCamera.xcworkspace"
+          xcodebuild -workspace DepthCamera.xcworkspace -list
+        elif [ -f "DepthCamera.xcodeproj" ]; then
+          echo "✅ Using project: DepthCamera.xcodeproj"
+          xcodebuild -project DepthCamera.xcodeproj -list
         else
-          echo "❌ No Xcode project or workspace found"
+          echo "❌ No Xcode project or workspace found in ${{ env.PROJECT_DIR }}"
           exit 1
         fi
 
@@ -146,20 +147,21 @@ jobs:
         BUILD_CONFIGURATION="${{ github.event.inputs.build_type || 'Release' }}"
         echo "🔨 Building configuration: $BUILD_CONFIGURATION"
 
-        # Create build directory
-        mkdir -p build
+        # Change to project directory
+        cd ${{ env.PROJECT_DIR }}
+
+        # Create build directory in root
+        mkdir -p ../build
 
         # Determine whether to use workspace or project
-        if [ -f "${{ env.WORKSPACE_NAME }}" ]; then
-          echo "📱 Using workspace: ${{ env.WORKSPACE_NAME }}"
-          BUILD_CMD="xcodebuild -workspace ${{ env.WORKSPACE_NAME }}"
-          ENTITLEMENTS_ARG=""
-        elif [ -f "${{ env.PROJECT_NAME }}" ]; then
-          echo "📱 Using project: ${{ env.PROJECT_NAME }}"
-          BUILD_CMD="xcodebuild -project ${{ env.PROJECT_NAME }}"
-          ENTITLEMENTS_ARG=""
+        if [ -f "DepthCamera.xcworkspace" ]; then
+          echo "📱 Using workspace: DepthCamera.xcworkspace"
+          BUILD_CMD="xcodebuild -workspace DepthCamera.xcworkspace"
+        elif [ -f "DepthCamera.xcodeproj" ]; then
+          echo "📱 Using project: DepthCamera.xcodeproj"
+          BUILD_CMD="xcodebuild -project DepthCamera.xcodeproj"
         else
-          echo "❌ No Xcode project or workspace found"
+          echo "❌ No Xcode project or workspace found in ${{ env.PROJECT_DIR }}"
           exit 1
         fi
 
@@ -170,7 +172,7 @@ jobs:
           -scheme ${{ env.SCHEME_NAME }} \
           -configuration $BUILD_CONFIGURATION \
           -destination generic/platform=iOS \
-          -archivePath build/DepthCamera-TrollStore.xcarchive \
+          -archivePath ../build/DepthCamera-TrollStore.xcarchive \
           archive \
           CODE_SIGN_IDENTITY="" \
           CODE_SIGNING_REQUIRED=NO \
@@ -186,7 +188,7 @@ jobs:
               -scheme ${{ env.SCHEME_NAME }} \
               -configuration $BUILD_CONFIGURATION \
               -destination generic/platform=iOS \
-              -archivePath build/DepthCamera-TrollStore.xcarchive \
+              -archivePath ../build/DepthCamera-TrollStore.xcarchive \
               archive \
               CODE_SIGN_IDENTITY="" \
               CODE_SIGNING_REQUIRED=NO \
