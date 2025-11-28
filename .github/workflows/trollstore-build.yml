@@ -132,7 +132,7 @@ jobs:
         echo "🔢 Setting build number to: $BUILD_NUMBER"
 
         # Try to set build number if project exists
-        if [ -f "${{ env.PROJECT_NAME }}" ]; then
+        if [ -f "DepthCamera.xcodeproj" ]; then
           echo "Setting version info..."
           agvtool new-marketing-version ${{ env.MARKETING_VERSION }} || echo "Failed to set marketing version (non-critical)"
           agvtool new-version -all $BUILD_NUMBER || echo "Failed to set build version (non-critical)"
@@ -151,7 +151,7 @@ jobs:
         cd ${{ env.PROJECT_DIR }}
 
         # Create build directory in root
-        mkdir -p ../build
+        mkdir -p build
 
         # Determine whether to use workspace or project
         if [ -f "DepthCamera.xcworkspace" ]; then
@@ -172,7 +172,7 @@ jobs:
           -scheme ${{ env.SCHEME_NAME }} \
           -configuration $BUILD_CONFIGURATION \
           -destination generic/platform=iOS \
-          -archivePath ../build/DepthCamera-TrollStore.xcarchive \
+          -archivePath build/DepthCamera-TrollStore.xcarchive \
           archive \
           CODE_SIGN_IDENTITY="" \
           CODE_SIGNING_REQUIRED=NO \
@@ -180,7 +180,8 @@ jobs:
           DEVELOPMENT_TEAM="" \
           PROVISIONING_PROFILE_SPECIFIER="" \
           ARCHS=arm64 \
-          ONLY_ACTIVE_ARCH=NO || {
+          ONLY_ACTIVE_ARCH=NO \
+          ENTITLEMENTS_FILE="${{ env.TROLLSTORE_ENTITLEMENTS }}" || {
             echo "⚠️ Primary build failed, trying alternative configuration..."
 
             # Retry with different settings
@@ -188,7 +189,7 @@ jobs:
               -scheme ${{ env.SCHEME_NAME }} \
               -configuration $BUILD_CONFIGURATION \
               -destination generic/platform=iOS \
-              -archivePath ../build/DepthCamera-TrollStore.xcarchive \
+              -archivePath build/DepthCamera-TrollStore.xcarchive \
               archive \
               CODE_SIGN_IDENTITY="" \
               CODE_SIGNING_REQUIRED=NO \
