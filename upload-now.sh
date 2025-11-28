@@ -19,7 +19,12 @@ git commit -m "Fix TrollStore build system - corrected workflow and entitlements
 
 Co-Authored-By: Claude <noreply@anthropic.com>"
 
-# Push to GitHub
+# Push to GitHub with authentication
+echo "🔐 Pushing to GitHub - authentication window will open..."
 git push origin main
 
 echo "✅ Done! Check your GitHub Actions: https://github.com/Alot1z/lidar-depth-map-capture-for-ios/actions"
+
+# Open GitHub Actions page
+echo "🌐 Opening GitHub Actions page..."
+start https://github.com/Alot1z/lidar-depth-map-capture-for-ios/actions
