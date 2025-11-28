@@ -1,7 +1,10 @@
 {
   "permissions": {
     "allow": [
-      "Bash(cat:*)"
+      "Bash(cat:*)",
+      "mcp__desktopcommander__list_directory",
+      "WebSearch",
+      "Bash(chmod:*)"
     ],
     "deny": []
   }
