@@ -5,7 +5,9 @@
       "mcp__desktopcommander__list_directory",
       "WebSearch",
       "Bash(chmod:*)",
-      "WebFetch(domain:github.com)"
+      "WebFetch(domain:github.com)",
+      "mcp__tractatusthinking__tractatus_thinking",
+      "Bash(dir:*)"
     ],
     "deny": []
   }

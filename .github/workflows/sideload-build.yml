@@ -1,4 +1,4 @@
-name: Build Normal Sideload IPA
+name: sideload ipa build
 
 on:
   push:
