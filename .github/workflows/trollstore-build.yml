@@ -111,6 +111,7 @@ jobs:
         EOF
           echo "✅ Fallback entitlements created"
         fi
+        echo "ENTITLEMENTS_FULL_PATH=$ENTITLEMENTS_FULL_PATH" >> $GITHUB_ENV
 
     - name: List Available Schemes
       run: |
@@ -190,26 +191,10 @@ jobs:
           PROVISIONING_PROFILE_SPECIFIER="" \
           ARCHS=arm64 \
           ONLY_ACTIVE_ARCH=NO \
-          ENTITLEMENTS_FILE="$ENTITLEMENTS_FULL_PATH"
-
-        # Build the app without code signing for TrollStore
-        $BUILD_CMD \
-          -scheme ${{ env.SCHEME_NAME }} \
-          -configuration $BUILD_CONFIGURATION \
-          -destination generic/platform=iOS \
-          -archivePath build/DepthCamera-TrollStore.xcarchive \
-          archive \
-          CODE_SIGN_IDENTITY="" \
-          CODE_SIGNING_REQUIRED=NO \
-          CODE_SIGNING_ALLOWED=NO \
-          DEVELOPMENT_TEAM="" \
-          PROVISIONING_PROFILE_SPECIFIER="" \
-          ARCHS=arm64 \
-          ONLY_ACTIVE_ARCH=NO \
-          ENTITLEMENTS_FILE="$ENTITLEMENTS_FULL_PATH" || {
+          ENTITLEMENTS_FILE="${{ env.ENTITLEMENTS_FULL_PATH }}" || {
             echo "⚠️ Primary build failed, trying alternative configuration..."
 
-            # Retry with different settings
+            # Retry with different settings (no entitlements)
             $BUILD_CMD \
               -scheme ${{ env.SCHEME_NAME }} \
               -configuration $BUILD_CONFIGURATION \
@@ -220,7 +205,9 @@ jobs:
               CODE_SIGNING_REQUIRED=NO \
               CODE_SIGNING_ALLOWED=NO \
               DEVELOPMENT_TEAM="" \
-              PROVISIONING_PROFILE_SPECIFIER=""
+              PROVISIONING_PROFILE_SPECIFIER="" \
+              ARCHS=arm64 \
+              ONLY_ACTIVE_ARCH=NO
           }
 
         echo "✅ Build completed successfully"
@@ -303,6 +290,10 @@ jobs:
 
     - name: Create Unsigned IPA Package
       run: |
+        echo "🔍 Current working directory: $(pwd)"
+        echo "🔍 Build directory contents:"
+        ls -la build/ 2>/dev/null || echo "Build directory not found"
+
         cd build
 
         # Find existing IPA or create from export
@@ -313,11 +304,16 @@ jobs:
           echo "📱 IPA already created manually"
         else
           echo "⚠️ No IPA found, creating from app bundle..."
+          echo "🔍 Current directory contents:"
+          ls -la
+          echo "🔍 Looking for .app files:"
+          find . -name "*.app" -type d -exec ls -la {} \;
 
           # Find the .app file
           APP_PATH=$(find . -name "*.app" -type d | head -n 1)
 
           if [ -n "$APP_PATH" ]; then
+            echo "✅ Found app at: $APP_PATH"
             # Create Payload directory
             mkdir -p Payload
             cp -r "$APP_PATH" Payload/
@@ -327,13 +323,19 @@ jobs:
 
             # Clean up
             rm -rf Payload
+            echo "✅ IPA created from app bundle"
           else
             echo "❌ Could not find .app file"
+            echo "🔍 Archive contents:"
+            ls -la *.xcarchive 2>/dev/null || echo "No archive found"
+            find . -name "*.xcarchive" -type d -exec find {} -name "*.app" \; 2>/dev/null || echo "No .app found in archives"
             exit 1
           fi
         fi
 
         cd ..
+        echo "🔍 Root directory contents after IPA creation:"
+        ls -la *.ipa 2>/dev/null || echo "No IPA files in root"
 
     - name: Verify IPA Structure
       run: |
@@ -363,6 +365,10 @@ jobs:
 
     - name: Generate Build Information
       run: |
+        echo "🔍 Current directory: $(pwd)"
+        echo "🔍 Looking for IPA file..."
+        find . -name "*.ipa" -type f -exec ls -la {} \;
+
         cat > build-info.json << EOF
         {
           "build_number": "${{ github.run_number }}",
@@ -378,7 +384,9 @@ jobs:
         }
         EOF
 
-        echo "📋 Build information:"
+        echo "📋 Build information created:"
+        ls -la build-info.json
+        echo "📋 Build information contents:"
         cat build-info.json
 
     - name: Upload Unsigned IPA
