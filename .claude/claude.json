@@ -1,0 +1,89 @@
+{
+  "mcpServers": {
+    "context7": {
+      "type": "stdio",
+      "command": "npx",
+      "args": [
+        "-y",
+        "@upstash/context7-mcp",
+        "--api-key",
+        "ctx7sk-1885fa1c-9262-42d4-8783-259627bc9803"
+      ],
+      "env": {}
+    },
+    "tractatusthinking": {
+      "type": "stdio",
+      "command": "C:\\github-repos\\mcp-windows-batch-fix\\examples\\run-tractatus-thinking.cmd",
+      "args": [],
+      "env": {}
+    },
+    "sequential-thinking": {
+      "type": "stdio",
+      "command": "C:\\github-repos\\mcp-windows-batch-fix\\MCP-servers\\sequential-thinking.cmd",
+      "args": [],
+      "env": {}
+    },
+    "deepwiki": {
+      "type": "sse",
+      "url": "https://mcp.deepwiki.com/sse"
+    },
+    "desktopcommander": {
+      "type": "stdio",
+      "command": "C:\\github-repos\\mcp-windows-batch-fix\\examples\\run-desktop-commander.cmd",
+      "args": [],
+      "env": {}
+    },
+    "debug-thinking": {
+      "type": "stdio",
+      "command": "node",
+      "args": [
+        "C:\\github-repos\\mcp-windows-batch-fix\\MCP-servers\\mcp-server-debug-thinking\\dist\\index.js"
+      ],
+      "env": {}
+    },
+    "mcp-sequentialthinking-tools": {
+      "type": "stdio",
+      "command": "npx",
+      "args": [
+        "-y",
+        "mcp-sequentialthinking-tools"
+      ],
+      "env": {}
+    },
+    "filesystem": {
+      "type": "stdio",
+      "command": "npx",
+      "args": [
+        "-y",
+        "@modelcontextprotocol/server-filesystem"
+      ],
+      "env": {}
+    },
+    "chrome-devtools": {
+      "type": "stdio",
+      "command": "npx",
+      "args": [
+        "-y",
+        "chrome-devtools-mcp"
+      ],
+      "env": {}
+    },
+    "code-runner": {
+      "type": "stdio",
+      "command": "npx",
+      "args": [
+        "-y",
+        "mcp-server-code-runner"
+      ],
+      "env": {}
+    },
+    "blender-mcp": {
+      "type": "stdio",
+      "command": "python",
+      "args": [
+        "C:\\github-repos\\mcp-windows-batch-fix\\MCP-servers\\blender-mcp\\main.py"
+      ],
+      "env": {}
+    }
+  }
+}
