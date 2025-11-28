@@ -1,4 +1,4 @@
-name: Build Unsigned IPA for TrollStore (FINAL)
+name: trollstore ipa build
 
 on:
   push:
