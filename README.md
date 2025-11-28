@@ -1,14 +1,19 @@
 # LiDAR Depth Map Capture for iOS
 
-This iOS app is designed for professional users who need to capture full-resolution depth maps using the LiDAR scanner on their iPhone or iPad. It addresses the issue of depth maps being scaled down to 8-bit when using the standard iOS libraries, allowing you to capture and save depth maps with their original precision.
+Professional LiDAR depth capture app with maximum precision and TrollStore enhancements.
 
-App Store : [https://apps.apple.com/us/app/depth-camera-raw/id6557075309](https://apps.apple.com/us/app/depth-camera-raw/id6557075309)
-## Features
+App Store: [https://apps.apple.com/us/app/depth-camera-raw/id6557075309](https://apps.apple.com/us/app/depth-camera-raw/id6557075309)
 
-- Captures depth maps from the LiDAR scanner
-- Saves depth maps as 32-bit floating-point TIFF images
-- Preserves the original depth values in meters
-- TODO:Simple and intuitive user interface
+## 📱 Features
+
+- **Real-time LiDAR depth capture** with ARKit integration
+- **32-bit floating-point TIFF export** - preserves original precision
+- **Interactive depth measurement tools** - tap to measure depth values
+- **Confidence map visualization** - see capture quality indicators
+- **Thumbnail generation and file management**
+- **TrollStore enhanced version** with maximum system access
+- **Background processing** for large depth maps (TrollStore only)
+- **Unlimited file system access** (TrollStore only)
 
 ## How it works
 
@@ -18,17 +23,68 @@ This app bypasses that limitation by directly accessing the depth data from the 
 
 For example, if a point in the scene is 5 meters away from the camera, the corresponding pixel value in the TIFF image will be 5.0. Similarly, if a point is 30 centimeters away, the pixel value will be 0.3.
 
-## Requirements
+## 🚀 Build System
 
-- iPhone or iPad with a LiDAR scanner (iPhone 12 Pro, iPhone 12 Pro Max, iPhone 13 Pro, iPhone 13 Pro Max, iPad Pro 11-inch (2nd generation or later), iPad Pro 12.9-inch (4th generation or later))
-- iOS 14 or later
+### Two Automated Workflows:
 
-## Installation
+1. **`trollstore ipa build`** - Maximum entitlements, enhanced features
+   - Unlimited file system access
+   - Enhanced ARKit capabilities
+   - Background processing
+   - Maximum system integration
 
-1. Clone this repository to your local machine.
-2. Open the project in Xcode.
-3. Connect your iPhone or iPad and select it as the build target.
-4. Build and run the app on your device.
+2. **`sideload ipa build`** - Standard sandbox, AltStore compatible
+   - App Store sandbox compliance
+   - Basic depth capture features
+   - Compatible with AltStore, Sideloadly
+
+### Project Structure:
+
+```
+lidar-depth-map-capture-for-ios/
+├── DepthCamera/                    # App source code
+│   ├── ARViewModel+TrollStore.swift
+│   ├── DepthCamera-TrollStore.entitlements
+│   └── ... (Swift files)
+├── DepthCamera.xcodeproj/          # Xcode project
+├── DepthCamera.xcworkspace/        # CocoaPods workspace
+├── .github/workflows/              # GitHub Actions CI/CD
+│   ├── trollstore-build.yml
+│   └── sideload-build.yml
+└── Podfile                         # Dependencies
+```
+
+## 📋 Requirements
+
+- iOS 16.0+
+- iPhone 12 Pro+ or iPad Pro 2020+ (LiDAR sensor)
+- Xcode 15+ (for development)
+- CocoaPods
+
+## 🔧 Installation
+
+### Option 1: TrollStore (Recommended)
+1. Go to [GitHub Actions](https://github.com/Alot1z/lidar-depth-map-capture-for-ios/actions)
+2. Select `trollstore ipa build` workflow
+3. Download the IPA from artifacts
+4. Install with TrollStore for maximum features
+
+### Option 2: Standard Sideload
+1. Go to [GitHub Actions](https://github.com/Alot1z/lidar-depth-map-capture-for-ios/actions)
+2. Select `sideload ipa build` workflow
+3. Download the IPA from artifacts
+4. Install with AltStore, Sideloadly, or other tools
+
+### Option 3: Development Build
+```bash
+# Clone and setup
+git clone https://github.com/Alot1z/lidar-depth-map-capture-for-ios.git
+cd lidar-depth-map-capture-for-ios
+pod install
+
+# Open in Xcode
+open DepthCamera.xcworkspace
+```
 
 ## Usage
 
