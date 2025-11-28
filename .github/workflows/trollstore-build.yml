@@ -153,37 +153,42 @@ jobs:
 
         # Change to project directory
         cd ${{ env.PROJECT_DIR }}
+        echo "📍 Current directory: $(pwd)"
+        echo "📁 Directory contents:"
+        ls -la
 
-        # Create build directory in root
-        mkdir -p build
+        # Find workspace or project
+        WORKSPACE_PATH=$(find . -name "*.xcworkspace" -type d | head -n 1)
+        PROJECT_PATH=$(find . -name "*.xcodeproj" -type d | head -n 1)
 
-        # Determine whether to use workspace or project
-        if [ -f "${{ env.WORKSPACE_NAME }}" ]; then
-          echo "📱 Using workspace: ${{ env.WORKSPACE_NAME }}"
-          BUILD_CMD="xcodebuild -workspace ${{ env.WORKSPACE_NAME }}"
-        elif [ -f "${{ env.PROJECT_NAME }}" ]; then
-          echo "📱 Using project: ${{ env.PROJECT_NAME }}"
-          BUILD_CMD="xcodebuild -project ${{ env.PROJECT_NAME }}"
+        if [ -n "$WORKSPACE_PATH" ]; then
+          echo "📱 Using workspace: $WORKSPACE_PATH"
+          WORKSPACE_NAME=$(basename "$WORKSPACE_PATH")
+          xcodebuild -workspace "$WORKSPACE_NAME" -list
+          BUILD_BASE="xcodebuild -workspace \"$WORKSPACE_NAME\""
+        elif [ -n "$PROJECT_PATH" ]; then
+          echo "📱 Using project: $PROJECT_PATH"
+          PROJECT_NAME=$(basename "$PROJECT_PATH")
+          xcodebuild -project "$PROJECT_NAME" -list
+          BUILD_BASE="xcodebuild -project \"$PROJECT_NAME\""
         else
           echo "❌ No Xcode project or workspace found"
           echo "Available files:"
-          ls -la
-          echo ""
-          echo "Looking for files:"
-          find . -name "*.xcworkspace" -type d
-          find . -name "*.xcodeproj" -type d
+          find . -name "*.xcworkspace" -o -name "*.xcodeproj"
           exit 1
         fi
 
-        echo "🚀 Starting build process..."
+        echo "🚀 Starting TrollStore build process..."
+
+        # Create build directory
+        mkdir -p build
 
         # Build the app without code signing for TrollStore
-        $BUILD_CMD \
+        $BUILD_BASE \
           -scheme ${{ env.SCHEME_NAME }} \
           -configuration $BUILD_CONFIGURATION \
           -destination generic/platform=iOS \
           -archivePath build/DepthCamera-TrollStore.xcarchive \
-          archive \
           CODE_SIGN_IDENTITY="" \
           CODE_SIGNING_REQUIRED=NO \
           CODE_SIGNING_ALLOWED=NO \
@@ -191,152 +196,104 @@ jobs:
           PROVISIONING_PROFILE_SPECIFIER="" \
           ARCHS=arm64 \
           ONLY_ACTIVE_ARCH=NO \
-          ENTITLEMENTS_FILE="${{ env.ENTITLEMENTS_FULL_PATH }}" || {
-            echo "⚠️ Primary build failed, trying alternative configuration..."
+          ENABLE_BITCODE=NO \
+          GCC_PREPROCESSOR_DEFINITIONS='$(inherited) NDEBUG=1'
 
-            # Retry with different settings (no entitlements)
-            $BUILD_CMD \
-              -scheme ${{ env.SCHEME_NAME }} \
-              -configuration $BUILD_CONFIGURATION \
-              -destination generic/platform=iOS \
-              -archivePath build/DepthCamera-TrollStore.xcarchive \
-              archive \
-              CODE_SIGN_IDENTITY="" \
-              CODE_SIGNING_REQUIRED=NO \
-              CODE_SIGNING_ALLOWED=NO \
-              DEVELOPMENT_TEAM="" \
-              PROVISIONING_PROFILE_SPECIFIER="" \
-              ARCHS=arm64 \
-              ONLY_ACTIVE_ARCH=NO
-          }
+        echo "✅ Archive completed successfully"
 
-        echo "✅ Build completed successfully"
-
-    - name: Export Unsigned IPA
-      run: |
-        echo "📦 Exporting unsigned IPA..."
-
-        # Create export options for unsigned IPA
-        cat > build/TrollStore-Export.plist << 'EOF'
-        <?xml version="1.0" encoding="UTF-8"?>
-        <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
-        <plist version="1.0">
-        <dict>
-            <key>method</key>
-            <string>development</string>
-            <key>signingStyle</key>
-            <string>manual</string>
-            <key>codeSignIdentity</key>
-            <string></string>
-            <key>provisioningProfiles</key>
-            <dict>
-            </dict>
-            <key>stripSwiftSymbols</key>
-            <false/>
-            <key>uploadBitcode</key>
-            <false/>
-            <key>uploadSymbols</key>
-            <false/>
-            <key>compileBitcode</key>
-            <false/>
-            <key>thinning</key>
-            <string>&lt;none&gt;</string>
-        </dict>
-        </plist>
-        EOF
-
-        # Export the archive as unsigned IPA
-        xcodebuild \
-          -exportArchive \
-          -archivePath build/DepthCamera-TrollStore.xcarchive \
-          -exportPath build/TrollStore-IPA \
-          -exportOptionsPlist build/TrollStore-Export.plist \
-          -allowProvisioningUpdates || {
-            echo "⚠️ Export failed, creating manual IPA..."
-
-            # Create IPA manually if export fails
-            echo "🔧 Creating IPA manually from archive..."
-            cd build
-
-            # Find the .app file
-            APP_PATH=$(find DepthCamera-TrollStore.xcarchive -name "*.app" -type d | head -n 1)
-
-            if [ -n "$APP_PATH" ]; then
-              echo "✅ Found app at: $APP_PATH"
-              echo "App size: $(du -sh "$APP_PATH")"
-
-              # Create Payload directory
-              mkdir -p Payload
-              cp -r "$APP_PATH" Payload/
-
-              # Create IPA
-              zip -r "../DepthCamera-TrollStore-${{ github.run_number }}.ipa" Payload/
-
-              # Clean up
-              rm -rf Payload
-
-              echo "✅ Manual IPA created successfully!"
-            else
-              echo "❌ Could not find .app file in archive"
-              echo "Archive contents:"
-              find DepthCamera-TrollStore.xcarchive -type d
-              exit 1
-            fi
-
-            cd ..
-          }
-
-        echo "✅ Export process completed"
-
-    - name: Create Unsigned IPA Package
-      run: |
-        echo "🔍 Current working directory: $(pwd)"
-        echo "🔍 Build directory contents:"
-        ls -la build/ 2>/dev/null || echo "Build directory not found"
-
-        cd build
-
-        # Find existing IPA or create from export
-        if [ -f "TrollStore-IPA/*.ipa" ]; then
-          echo "📱 Found exported IPA"
-          cp TrollStore-IPA/*.ipa "../DepthCamera-TrollStore-${{ github.run_number }}.ipa"
-        elif [ -f "../DepthCamera-TrollStore-${{ github.run_number }}.ipa" ]; then
-          echo "📱 IPA already created manually"
+        # Verify archive was created
+        if [ -d "build/DepthCamera-TrollStore.xcarchive" ]; then
+          echo "✅ Archive verified at build/DepthCamera-TrollStore.xcarchive"
+          echo "📊 Archive size: $(du -sh build/DepthCamera-TrollStore.xcarchive)"
         else
-          echo "⚠️ No IPA found, creating from app bundle..."
-          echo "🔍 Current directory contents:"
-          ls -la
-          echo "🔍 Looking for .app files:"
-          find . -name "*.app" -type d -exec ls -la {} \;
-
-          # Find the .app file
-          APP_PATH=$(find . -name "*.app" -type d | head -n 1)
-
-          if [ -n "$APP_PATH" ]; then
-            echo "✅ Found app at: $APP_PATH"
-            # Create Payload directory
-            mkdir -p Payload
-            cp -r "$APP_PATH" Payload/
-
-            # Create IPA
-            zip -r "../DepthCamera-TrollStore-${{ github.run_number }}.ipa" Payload/
-
-            # Clean up
-            rm -rf Payload
-            echo "✅ IPA created from app bundle"
-          else
-            echo "❌ Could not find .app file"
-            echo "🔍 Archive contents:"
-            ls -la *.xcarchive 2>/dev/null || echo "No archive found"
-            find . -name "*.xcarchive" -type d -exec find {} -name "*.app" \; 2>/dev/null || echo "No .app found in archives"
-            exit 1
-          fi
+          echo "❌ Archive not found!"
+          echo "📁 Build directory contents:"
+          ls -la build/
+          exit 1
         fi
 
-        cd ..
-        echo "🔍 Root directory contents after IPA creation:"
-        ls -la *.ipa 2>/dev/null || echo "No IPA files in root"
+    - name: Create Unsigned IPA
+      run: |
+        echo "📦 Creating unsigned IPA from archive..."
 
+        # Change to project directory
+        cd ${{ env.PROJECT_DIR }}
+        echo "📍 Working directory: $(pwd)"
+
+        # Verify archive exists
+        if [ ! -d "build/DepthCamera-TrollStore.xcarchive" ]; then
+          echo "❌ Archive not found!"
+          echo "📁 Build directory contents:"
+          ls -la build/ || echo "Build directory doesn't exist"
+          exit 1
+        fi
+
+        # Find the .app file in the archive
+        APP_PATH=$(find build/DepthCamera-TrollStore.xcarchive -name "*.app" -type d | head -n 1)
+
+        if [ -z "$APP_PATH" ]; then
+          echo "❌ No .app file found in archive!"
+          echo "🔍 Archive structure:"
+          find build/DepthCamera-TrollStore.xcarchive -type d | head -20
+          echo "🔍 All .app files:"
+          find build/DepthCamera-TrollStore.xcarchive -name "*.app" -type d
+          exit 1
+        fi
+
+        echo "✅ Found app at: $APP_PATH"
+        echo "📊 App size: $(du -sh "$APP_PATH")"
+
+        # Create IPA manually (more reliable than xcodebuild export)
+        cd build
+
+        # Create Payload directory
+        mkdir -p Payload
+
+        # Copy the app bundle
+        echo "📋 Copying app bundle..."
+        cp -r "$APP_PATH" Payload/
+
+        # Verify Payload structure
+        echo "📁 Payload structure:"
+        ls -la Payload/
+        if [ -d "Payload/$(basename "$APP_PATH")" ]; then
+          echo "✅ App bundle copied successfully"
+        else
+          echo "❌ App bundle copy failed!"
+          exit 1
+        fi
+
+        # Create the IPA file
+        echo "🗜️ Creating IPA archive..."
+        zip -r "../DepthCamera-TrollStore-${{ github.run_number }}.ipa" Payload/
+
+        # Verify IPA was created
+        if [ -f "../DepthCamera-TrollStore-${{ github.run_number }}.ipa" ]; then
+          echo "✅ IPA created successfully!"
+          echo "📊 IPA file: DepthCamera-TrollStore-${{ github.run_number }}.ipa"
+          echo "📊 IPA size: $(du -sh "../DepthCamera-TrollStore-${{ github.run_number }}.ipa")"
+
+          # Test IPA integrity
+          echo "🔍 Testing IPA integrity..."
+          if unzip -t "../DepthCamera-TrollStore-${{ github.run_number }}.ipa" > /dev/null 2>&1; then
+            echo "✅ IPA integrity check passed"
+          else
+            echo "⚠️ IPA integrity check failed"
+          fi
+        else
+          echo "❌ IPA creation failed!"
+          echo "📁 Current directory contents:"
+          ls -la ..
+          exit 1
+        fi
+
+        # Clean up
+        rm -rf Payload
+        cd ..
+
+        echo "🎉 IPA creation completed successfully!"
+
+    
     - name: Verify IPA Structure
       run: |
         if [ -f "DepthCamera-TrollStore-${{ github.run_number }}.ipa" ]; then
