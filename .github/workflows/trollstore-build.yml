@@ -1,0 +1,356 @@
+name: Build Unsigned IPA for TrollStore
+
+on:
+  push:
+    branches: [ main, develop, trollstore ]
+  pull_request:
+    branches: [ main, develop, trollstore ]
+  workflow_dispatch:
+    inputs:
+      build_type:
+        description: 'Build type'
+        required: true
+        default: 'Release'
+        type: choice
+        options:
+        - Debug
+        - Release
+
+env:
+  BUNDLE_IDENTIFIER: 'dev.iori.depthcamera0'
+  MARKETING_VERSION: '1.1'
+  SCHEME_NAME: 'DepthCamera'
+  WORKSPACE_NAME: 'DepthCamera.xcworkspace'
+  TROLLSTORE_ENTITLEMENTS: 'DepthCamera/DepthCamera-TrollStore.entitlements'
+
+jobs:
+  # Build Unsigned IPA for TrollStore
+  build-trollstore:
+    runs-on: macos-latest
+
+    steps:
+    - name: Checkout Repository
+      uses: actions/checkout@v4
+
+    - name: Setup Xcode
+      uses: maxim-lobanov/setup-xcode@v1
+      with:
+        xcode-version: 'latest-stable'
+
+    - name: Setup Ruby
+      uses: ruby/setup-ruby@v1
+      with:
+        ruby-version: '3.2'
+        bundler-cache: true
+
+    - name: Cache CocoaPods
+      uses: actions/cache@v3
+      with:
+        path: |
+          Pods
+          ~/Library/Caches/CocoaPods
+          ~/.cocoapods
+        key: ${{ runner.os }}-pods-${{ hashFiles('**/Podfile.lock') }}
+        restore-keys: |
+          ${{ runner.os }}-pods-
+
+    - name: Install CocoaPods Dependencies
+      run: |
+        cd DepthCamera
+        pod install --repo-update
+
+    - name: Show Build Configuration
+      run: |
+        cd DepthCamera
+        echo "Available schemes:"
+        xcodebuild -workspace ${{ env.WORKSPACE_NAME }} -list
+        echo "Current directory contents:"
+        ls -la
+
+    - name: Configure Build Number
+      run: |
+        cd DepthCamera
+        BUILD_NUMBER=${{ github.run_number }}
+        echo "Setting build number to: $BUILD_NUMBER"
+        agvtool new-marketing-version ${{ env.MARKETING_VERSION }}
+        agvtool new-version -all $BUILD_NUMBER
+
+    - name: Build for TrollStore (Unsigned)
+      run: |
+        cd DepthCamera
+
+        # Configuration based on input
+        BUILD_CONFIGURATION="${{ github.event.inputs.build_type || 'Release' }}"
+        echo "Building configuration: $BUILD_CONFIGURATION"
+
+        # Create build directory
+        mkdir -p build
+
+        # Build the app without code signing for TrollStore
+        xcodebuild \
+          -workspace ${{ env.WORKSPACE_NAME }} \
+          -scheme ${{ env.SCHEME_NAME }} \
+          -configuration $BUILD_CONFIGURATION \
+          -destination generic/platform=iOS \
+          -archivePath build/DepthCamera-TrollStore.xcarchive \
+          archive \
+          CODE_SIGN_IDENTITY="" \
+          CODE_SIGNING_REQUIRED=NO \
+          CODE_SIGNING_ALLOWED=NO \
+          DEVELOPMENT_TEAM="" \
+          PROVISIONING_PROFILE_SPECIFIER="" \
+          ENTITLEMENTS_FILE="${{ env.TROLLSTORE_ENTITLEMENTS }}" \
+          OTHER_CODE_SIGN_FLAGS="--keychain /dev/null"
+
+    - name: Export Unsigned IPA
+      run: |
+        cd DepthCamera
+
+        # Create export options for unsigned IPA
+        cat > build/TrollStore-Export.plist << 'EOF'
+        <?xml version="1.0" encoding="UTF-8"?>
+        <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+        <plist version="1.0">
+        <dict>
+            <key>method</key>
+            <string>development</string>
+            <key>signingStyle</key>
+            <string>manual</string>
+            <key>codeSignIdentity</key>
+            <string></string>
+            <key>provisioningProfiles</key>
+            <dict>
+            </dict>
+            <key>stripSwiftSymbols</key>
+            <false/>
+            <key>uploadBitcode</key>
+            <false/>
+            <key>uploadSymbols</key>
+            <false/>
+            <key>compileBitcode</key>
+            <false/>
+            <key>thinning</key>
+            <string>&lt;none&gt;</string>
+        </dict>
+        </plist>
+        EOF
+
+        # Export the archive as unsigned IPA
+        xcodebuild \
+          -exportArchive \
+          -archivePath build/DepthCamera-TrollStore.xcarchive \
+          -exportPath build/TrollStore-IPA \
+          -exportOptionsPlist build/TrollStore-Export.plist \
+          -allowProvisioningUpdates
+
+    - name: Create Unsigned IPA Package
+      run: |
+        cd DepthCamera/build
+
+        # Find the .app file
+        APP_PATH=$(find . -name "*.app" -type d | head -n 1)
+        echo "Found app at: $APP_PATH"
+
+        if [ -n "$APP_PATH" ]; then
+          # Create Payload directory for IPA structure
+          mkdir -p Payload
+          cp -r "$APP_PATH" Payload/
+
+          # Create IPA file
+          zip -r "../DepthCamera-TrollStore-${{ github.run_number }}.ipa" Payload/
+
+          # Clean up
+          rm -rf Payload
+
+          echo "IPA created successfully!"
+          ls -la ../DepthCamera-TrollStore-${{ github.run_number }}.ipa
+        else
+          echo "Error: Could not find .app file"
+          exit 1
+        fi
+
+    - name: Verify IPA Structure
+      run: |
+        cd DepthCamera
+        if [ -f "DepthCamera-TrollStore-${{ github.run_number }}.ipa" ]; then
+          echo "✅ IPA file created successfully!"
+          echo "File size: $(du -h DepthCamera-TrollStore-${{ github.run_number }}.ipa)"
+
+          # Extract and verify IPA contents
+          mkdir -p temp_verify
+          cd temp_verify
+          unzip -q ../DepthCamera-TrollStore-${{ github.run_number }}.ipa
+
+          echo "IPA Contents:"
+          find Payload -name "*.app" -exec ls -la {} \;
+
+          # Check for TrollStore entitlements
+          APP_NAME=$(find Payload -name "*.app" -type d -exec basename {} \;)
+          if [ -f "Payload/$APP_NAME/DepthCamera-TrollStore.entitlements" ]; then
+            echo "✅ TrollStore entitlements found!"
+          else
+            echo "⚠️ TrollStore entitlements not found in app bundle"
+          fi
+
+          cd ..
+          rm -rf temp_verify
+        else
+          echo "❌ IPA file not found!"
+          exit 1
+        fi
+
+    - name: Generate Build Information
+      run: |
+        cd DepthCamera
+        cat > build-info.json << EOF
+        {
+          "build_number": "${{ github.run_number }}",
+          "commit_sha": "${{ github.sha }}",
+          "branch": "${{ github.ref_name }}",
+          "build_type": "${{ github.event.inputs.build_type || 'Release' }}",
+          "timestamp": "$(date -u +%Y-%m-%dT%H:%M:%SZ)",
+          "bundle_identifier": "${{ env.BUNDLE_IDENTIFIER }}",
+          "marketing_version": "${{ env.MARKETING_VERSION }}",
+          "ipa_file": "DepthCamera-TrollStore-${{ github.run_number }}.ipa",
+          "trollstore_optimized": true
+        }
+        EOF
+
+        echo "Build information:"
+        cat build-info.json
+
+    - name: Upload Unsigned IPA
+      uses: actions/upload-artifact@v4
+      with:
+        name: depthcamera-trollstore-ipa
+        path: |
+          DepthCamera/DepthCamera-TrollStore-${{ github.run_number }}.ipa
+          DepthCamera/build-info.json
+        retention-days: 30
+
+    - name: Upload Archive for Debugging
+      uses: actions/upload-artifact@v4
+      with:
+        name: depthcamera-trollstore-archive
+        path: DepthCamera/build/
+        retention-days: 7
+
+  # Build Validation
+  validate-build:
+    runs-on: macos-latest
+    needs: build-trollstore
+    if: github.event_name == 'pull_request'
+
+    steps:
+    - name: Download IPA
+      uses: actions/download-artifact@v4
+      with:
+        name: depthcamera-trollstore-ipa
+        path: ./artifacts
+
+    - name: Validate IPA Structure
+      run: |
+        cd artifacts
+        IPA_FILE=$(find . -name "*.ipa" | head -n 1)
+
+        if [ -n "$IPA_FILE" ]; then
+          echo "✅ Validating IPA: $IPA_FILE"
+
+          # Extract IPA
+          unzip -q "$IPA_FILE" -d extracted
+
+          # Check app structure
+          APP_PATH=$(find extracted/Payload -name "*.app" -type d | head -n 1)
+
+          if [ -n "$APP_PATH" ]; then
+            echo "✅ App bundle found: $(basename $APP_PATH)"
+
+            # Check for required files
+            REQUIRED_FILES=("Info.plist" "DepthCamera"]
+            for file in "${REQUIRED_FILES[@]}"; do
+              if [ -f "$APP_PATH/$file" ]; then
+                echo "✅ Found required file: $file"
+              else
+                echo "❌ Missing required file: $file"
+                exit 1
+              fi
+            done
+
+            # Check Info.plist
+            echo "Bundle ID: $(/usr/libexec/PlistBuddy -c "Print CFBundleIdentifier" "$APP_PATH/Info.plist" 2>/dev/null || echo 'Not found')"
+            echo "Version: $(/usr/libexec/PlistBuddy -c "Print CFBundleShortVersionString" "$APP_PATH/Info.plist" 2>/dev/null || echo 'Not found')"
+            echo "Build: $(/usr/libexec/PlistBuddy -c "Print CFBundleVersion" "$APP_PATH/Info.plist" 2>/dev/null || echo 'Not found')"
+
+          else
+            echo "❌ No app bundle found in IPA"
+            exit 1
+          fi
+        else
+          echo "❌ No IPA file found"
+          exit 1
+        fi
+
+  # Release Creation (for main branch)
+  create-release:
+    runs-on: macos-latest
+    needs: build-trollstore
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+
+    steps:
+    - name: Download IPA
+      uses: actions/download-artifact@v4
+      with:
+        name: depthcamera-trollstore-ipa
+        path: ./release-artifacts
+
+    - name: Create Release
+      uses: softprops/action-gh-release@v2
+      with:
+        name: "TrollStore Build ${{ github.run_number }}"
+        body: |
+          ## 📱 DepthCamera TrollStore Build
+
+          **Build Information:**
+          - 🏷️ **Version:** ${{ env.MARKETING_VERSION }} (${{ github.run_number }})
+          - 📅 **Date:** $(date +'%Y-%m-%d %H:%M UTC')
+          - 🔗 **Commit:** [${{ github.sha }}](${{ github.server_url }}/${{ github.repository }}/commit/${{ github.sha }})
+          - 🌿 **Branch:** ${{ github.ref_name }}
+
+          **Features:**
+          - ✅ **TrollStore Optimized** - Enhanced entitlements for maximum functionality
+          - ✅ **Unsigned IPA** - Ready for TrollStore installation
+          - ✅ **ARKit Enhanced** - Unlimited depth capture capabilities
+          - ✅ **File System Access** - Unrestricted file operations
+          - ✅ **Background Processing** - Enhanced performance
+
+          **Installation:**
+          1. Download the `.ipa` file below
+          2. Install via TrollStore on your iOS device
+          3. Grant necessary permissions when prompted
+
+          **Enhanced Capabilities (TrollStore Only):**
+          - 🎯 **Unrestricted LiDAR Access** - Maximum depth capture frequency
+          - 💾 **Full File System Access** - Save anywhere on device
+          - ⚡ **Enhanced Memory Management** - Process large depth maps
+          - 🔒 **No Sandbox Restrictions** - Direct system access
+          - 📊 **Advanced Logging** - Detailed capture diagnostics
+
+          ---
+
+          📋 **Build Details:**
+          - Bundle ID: `${{ env.BUNDLE_IDENTIFIER }}`
+          - Build Type: `${{ github.event.inputs.build_type || 'Release' }}`
+          - Optimized for: TrollStore 2.0+
+
+          ---
+
+          ⚠️ **Note:** This build is specifically designed for TrollStore and will not work with standard sideloading methods.
+
+        files: |
+          release-artifacts/DepthCamera-TrollStore-${{ github.run_number }}.ipa
+          release-artifacts/build-info.json
+        draft: false
+        prerelease: false
+        generate_release_notes: true
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

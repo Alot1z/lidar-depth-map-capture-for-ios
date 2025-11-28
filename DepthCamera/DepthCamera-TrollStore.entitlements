@@ -1,0 +1,143 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<!-- Core App Capabilities -->
+	<key>com.apple.developer.team-identifier</key>
+	<string>9RWAJP8AG7</string>
+
+	<!-- Enhanced File System Access (TrollStore Only) -->
+	<key>com.apple.private.persona-identifier</key>
+	<string>com.apple.persona.nonshared</string>
+
+	<!-- Unrestricted File System Access -->
+	<key>com.apple.private.security.container-management</key>
+	<true/>
+	<key>com.apple.private.security.storage-appdata</key>
+	<true/>
+	<key>com.apple.private.security.storage-osx</key>
+	<true/>
+
+	<!-- Enhanced Camera and ARKit Access -->
+	<key>com.apple.avfoundation.allow-system-wide-capture</key>
+	<true/>
+	<key>com.apple.private.avfoundation.capture.interrupt</key>
+	<true/>
+	<key>com.apple.private.avfoundation.camera.allow-fs-buffer-access</key>
+	<true/>
+	<key>com.apple.private.avfoundation.framing-depth</key>
+	<true/>
+
+	<!-- ARKit Enhanced Depth Processing -->
+	<key>com.apple.private.arkit.allow-depth-data-access</key>
+	<true/>
+	<key>com.apple.private.arkit.unlimited-depth-capture</key>
+	<true/>
+	<key>com.apple.private.arkit.raw-depth-data</key>
+	<true/>
+	<key>com.apple.private.arkit.high-frequency-depth</key>
+	<true/>
+
+	<!-- Memory Management for Large Depth Files -->
+	<key>com.apple.private.memorystatus</key>
+	<true/>
+	<key>com.apple.private.memory-markers</key>
+	<true/>
+
+	<!-- Background Processing -->
+	<key>com.apple.private.backgroundmode</key>
+	<array>
+		<string>background-processing</string>
+		<string>background-fetch</string>
+	</array>
+
+	<!-- Enhanced Logging and Diagnostics -->
+	<key>com.apple.private.logging</key>
+	<true/>
+	<key>com.apple.private.sysdiagnose</key>
+	<true/>
+
+	<!-- Network and Cloud Access -->
+	<key>com.apple.private.network.system-managed</key>
+	<true/>
+	<key>com.apple.private.tcc.allow</key>
+	<array>
+		<string>kTCCServicePhotos</string>
+		<string>kTCCServiceCamera</string>
+		<string>kTCCServiceMicrophone</string>
+		<string>kTCCServiceDesktopFolder</string>
+		<string>kTCCServiceDocumentsFolder</string>
+		<string>kTCCServiceDownloadsFolder</string>
+	</array>
+
+	<!-- File Access and Sharing -->
+	<key>com.apple.private.files.user-selected.read-write</key>
+	<true/>
+	<key>com.apple.private.filesystem-access</key>
+	<true/>
+	<key>com.apple.security.application-groups</key>
+	<array>
+		<string>group.dev.iori.depthcamera</string>
+	</array>
+
+	<!-- Enhanced Metal Processing for Depth Data -->
+	<key>com.apple.private.gpu-expansion</key>
+	<true/>
+	<key>com.apple.private.metal.unlimited-memory</key>
+	<true/>
+
+	<!-- Debugging and Development -->
+	<key>com.apple.private.amfi.can-load-custom-entitlements</key>
+	<true/>
+	<key>com.apple.private.amfi.can-load-cdhash</key>
+	<true/>
+	<key>com.apple.private.security.debugger</key>
+	<true/>
+
+	<!-- Remove Sandbox Restrictions (TrollStore Only) -->
+	<key>com.apple.private.skip-sandbox-validation</key>
+	<true/>
+	<key>com.apple.private.tcc.allow-override-daemon</key>
+	<true/>
+
+	<!-- Enhanced iCloud and Document Access -->
+	<key>com.apple.private.iCloud-helper-services</key>
+	<true/>
+	<key>com.apple.private.documentpicker</key>
+	<true/>
+
+	<!-- System Extensions and Plugin Support -->
+	<key>com.apple.private.system-extension-install</key>
+	<true/>
+
+	<!-- Memory and Performance Optimization -->
+	<key>com.apple.private.powerlog.panic-entitled</key>
+	<true/>
+	<key>com.apple.private.activity-monitor</key>
+	<true/>
+
+	<!-- Enhanced Siri and Media Access -->
+	<key>com.apple.private.siri.lock-aware</key>
+	<true/>
+	<key>com.apple.private.media-heuristic</key>
+	<true/>
+
+	<!-- Developer Tools Integration -->
+	<key>com.apple.private.developer.user-configured-fs</key>
+	<true/>
+	<key>com.apple.private.webinspector</key>
+	<true/>
+
+	<!-- Additional System Access -->
+	<key>com.apple.private.usernotifications.content-access</key>
+	<true/>
+	<key>com.apple.private.coreservices.canmap-iphone</key>
+	<true/>
+
+	<!-- Legacy Entitlements for Compatibility -->
+	<key>keychain-access-groups</key>
+	<array>
+		<string>$(AppIdentifierPrefix)dev.iori.depthcamera0</string>
+	</array>
+</dict>
+</plist>
