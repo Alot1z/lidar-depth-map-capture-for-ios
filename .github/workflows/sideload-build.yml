@@ -21,9 +21,9 @@ env:
   BUNDLE_IDENTIFIER: 'dev.iori.depthcamera0'
   MARKETING_VERSION: '1.1'
   SCHEME_NAME: 'DepthCamera'
-  WORKSPACE_PATH: 'lidar-depth-map-capture-for-ios/DepthCamera.xcworkspace'
-  PROJECT_PATH: 'lidar-depth-map-capture-for-ios/DepthCamera.xcodeproj'
   PROJECT_DIR: 'lidar-depth-map-capture-for-ios'
+  WORKSPACE_NAME: 'DepthCamera.xcworkspace'
+  PROJECT_NAME: 'DepthCamera.xcodeproj'
 
 jobs:
   # Build Normal Sideload IPA
@@ -98,13 +98,15 @@ jobs:
         echo "🔢 Setting build number to: $BUILD_NUMBER"
 
         # Try to set build number if project exists
-        if [ -f "DepthCamera.xcodeproj" ]; then
-          echo "Setting version info..."
+        if [ -f "${{ env.PROJECT_NAME }}" ]; then
+          echo "Setting version info in ${{ env.PROJECT_NAME }}..."
+          cd ${{ env.PROJECT_NAME }} 2>/dev/null || cd $(basename "${{ env.PROJECT_NAME }}" .xcodeproj)
           agvtool new-marketing-version ${{ env.MARKETING_VERSION }} || echo "Failed to set marketing version (non-critical)"
           agvtool new-version -all $BUILD_NUMBER || echo "Failed to set build version (non-critical)"
+          cd ..
           echo "✅ Build number configured"
         else
-          echo "⚠️ Project not found for version configuration"
+          echo "⚠️ Project not found: ${{ env.PROJECT_NAME }}"
         fi
 
     - name: Build App for Sideload
@@ -117,17 +119,23 @@ jobs:
         cd ${{ env.PROJECT_DIR }}
 
         # Create build directory in root
-        mkdir -p ../build
+        mkdir -p build
 
         # Determine whether to use workspace or project
-        if [ -f "DepthCamera.xcworkspace" ]; then
-          echo "📱 Using workspace: DepthCamera.xcworkspace"
-          BUILD_CMD="xcodebuild -workspace DepthCamera.xcworkspace"
-        elif [ -f "DepthCamera.xcodeproj" ]; then
-          echo "📱 Using project: DepthCamera.xcodeproj"
-          BUILD_CMD="xcodebuild -project DepthCamera.xcodeproj"
+        if [ -f "${{ env.WORKSPACE_NAME }}" ]; then
+          echo "📱 Using workspace: ${{ env.WORKSPACE_NAME }}"
+          BUILD_CMD="xcodebuild -workspace ${{ env.WORKSPACE_NAME }}"
+        elif [ -f "${{ env.PROJECT_NAME }}" ]; then
+          echo "📱 Using project: ${{ env.PROJECT_NAME }}"
+          BUILD_CMD="xcodebuild -project ${{ env.PROJECT_NAME }}"
         else
-          echo "❌ No Xcode project or workspace found in ${{ env.PROJECT_DIR }}"
+          echo "❌ No Xcode project or workspace found"
+          echo "Available files:"
+          ls -la
+          echo ""
+          echo "Looking for files:"
+          find . -name "*.xcworkspace" -type d
+          find . -name "*.xcodeproj" -type d
           exit 1
         fi
 
@@ -138,7 +146,7 @@ jobs:
           -scheme ${{ env.SCHEME_NAME }} \
           -configuration $BUILD_CONFIGURATION \
           -destination generic/platform=iOS \
-          -archivePath ../build/DepthCamera-Sideload.xcarchive \
+          -archivePath build/DepthCamera-Sideload.xcarchive \
           archive \
           CODE_SIGN_IDENTITY="" \
           CODE_SIGNING_REQUIRED=NO \

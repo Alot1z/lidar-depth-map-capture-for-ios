@@ -9,7 +9,8 @@
       "mcp__tractatusthinking__tractatus_thinking",
       "Bash(dir:*)",
       "mcp__desktopcommander__read_multiple_files",
-      "mcp__desktopcommander__read_file"
+      "mcp__desktopcommander__read_file",
+      "WebFetch(domain:www.andrewhoog.com)"
     ],
     "deny": []
   }
