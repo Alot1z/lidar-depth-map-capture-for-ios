@@ -57,8 +57,9 @@ git commit -m "$COMMIT_MSG
 
 Co-Authored-By: Claude <noreply@anthropic.com>"
 
-# Push to remote
+# Push to remote with authentication
 echo -e "${YELLOW}⬆️  Pushing to origin/$CURRENT_BRANCH...${NC}"
+echo -e "${BLUE}🔐 Authentication window will open if needed${NC}"
 git push origin "$CURRENT_BRANCH"
 
 echo -e "${GREEN}✅ Successfully uploaded to GitHub!${NC}"
@@ -66,3 +67,7 @@ echo -e "${BLUE}🔗 Repository: https://github.com/Alot1z/lidar-depth-map-captu
 
 # Show actions if available
 echo -e "${BLUE}🔧 Check GitHub Actions: https://github.com/Alot1z/lidar-depth-map-capture-for-ios/actions${NC}"
+
+# Open GitHub Actions page
+echo -e "${YELLOW}🌐 Opening GitHub Actions page...${NC}"
+start https://github.com/Alot1z/lidar-depth-map-capture-for-ios/actions
