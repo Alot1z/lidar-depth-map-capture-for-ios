@@ -23,7 +23,7 @@ env:
   PROJECT_DIR: 'lidar-depth-map-capture-for-ios'
   WORKSPACE_NAME: 'DepthCamera.xcworkspace'
   PROJECT_NAME: 'DepthCamera.xcodeproj'
-  TROLLSTORE_ENTITLEMENTS: 'DepthCamera/DepthCamera-TrollStore.entitlements'
+  TROLLSTORE_ENTITLEMENTS: 'lidar-depth-map-capture-for-ios/DepthCamera/DepthCamera-TrollStore.entitlements'
 
 jobs:
   # Build Unsigned IPA for TrollStore
@@ -85,16 +85,17 @@ jobs:
 
     - name: Check TrollStore Entitlements
       run: |
-        if [ -f "${{ env.TROLLSTORE_ENTITLEMENTS }}" ]; then
-          echo "✅ TrollStore entitlements found at ${{ env.TROLLSTORE_ENTITLEMENTS }}"
-          echo "Entitlements file size: $(wc -c < "${{ env.TROLLSTORE_ENTITLEMENTS }}") bytes"
+        ENTITLEMENTS_FULL_PATH="${{ env.TROLLSTORE_ENTITLEMENTS }}"
+        if [ -f "$ENTITLEMENTS_FULL_PATH" ]; then
+          echo "✅ TrollStore entitlements found at $ENTITLEMENTS_FULL_PATH"
+          echo "Entitlements file size: $(wc -c < "$ENTITLEMENTS_FULL_PATH") bytes"
         else
-          echo "❌ TrollStore entitlements not found at ${{ env.TROLLSTORE_ENTITLEMENTS }}"
+          echo "❌ TrollStore entitlements not found at $ENTITLEMENTS_FULL_PATH"
           echo "Searching for entitlements files:"
           find ${{ env.PROJECT_DIR }} -name "*.entitlements" -type f
           echo "Creating fallback entitlements..."
           mkdir -p ${{ env.PROJECT_DIR }}/DepthCamera
-          cat > "${{ env.TROLLSTORE_ENTITLEMENTS }}" << 'EOF'
+          cat > "$ENTITLEMENTS_FULL_PATH" << 'EOF'
         <?xml version="1.0" encoding="UTF-8"?>
         <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
         <plist version="1.0">
@@ -189,7 +190,23 @@ jobs:
           PROVISIONING_PROFILE_SPECIFIER="" \
           ARCHS=arm64 \
           ONLY_ACTIVE_ARCH=NO \
-          ENTITLEMENTS_FILE="${{ env.PROJECT_DIR }}/${{ env.TROLLSTORE_ENTITLEMENTS }}" || {
+          ENTITLEMENTS_FILE="$ENTITLEMENTS_FULL_PATH"
+
+        # Build the app without code signing for TrollStore
+        $BUILD_CMD \
+          -scheme ${{ env.SCHEME_NAME }} \
+          -configuration $BUILD_CONFIGURATION \
+          -destination generic/platform=iOS \
+          -archivePath build/DepthCamera-TrollStore.xcarchive \
+          archive \
+          CODE_SIGN_IDENTITY="" \
+          CODE_SIGNING_REQUIRED=NO \
+          CODE_SIGNING_ALLOWED=NO \
+          DEVELOPMENT_TEAM="" \
+          PROVISIONING_PROFILE_SPECIFIER="" \
+          ARCHS=arm64 \
+          ONLY_ACTIVE_ARCH=NO \
+          ENTITLEMENTS_FILE="$ENTITLEMENTS_FULL_PATH" || {
             echo "⚠️ Primary build failed, trying alternative configuration..."
 
             # Retry with different settings

@@ -10,7 +10,10 @@
       "Bash(dir:*)",
       "mcp__desktopcommander__read_multiple_files",
       "mcp__desktopcommander__read_file",
-      "WebFetch(domain:www.andrewhoog.com)"
+      "WebFetch(domain:www.andrewhoog.com)",
+      "Bash(git add:*)",
+      "Bash(git commit:*)",
+      "Bash(git push:*)"
     ],
     "deny": []
   }
