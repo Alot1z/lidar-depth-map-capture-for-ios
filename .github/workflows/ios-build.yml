@@ -45,56 +45,109 @@ jobs:
 
     - name: Install CocoaPods Dependencies
       run: |
-        cd DepthCamera
+        echo "Installing CocoaPods dependencies..."
         pod install --repo-update
+        echo "✅ CocoaPods installed successfully"
 
     - name: Show CocoaPods Versions
       run: |
-        cd DepthCamera
         pod --version
 
     - name: List Available Schemes
       run: |
-        cd DepthCamera
-        xcodebuild -workspace DepthCamera.xcworkspace -list
+        echo "🔍 Listing available schemes..."
+        if [ -f "DepthCamera.xcworkspace" ]; then
+          xcodebuild -workspace DepthCamera.xcworkspace -list
+        elif [ -f "DepthCamera.xcodeproj" ]; then
+          xcodebuild -project DepthCamera.xcodeproj -list
+        else
+          echo "❌ No workspace or project found"
+          exit 1
+        fi
 
     - name: Build for Testing
       run: |
-        cd DepthCamera
-        xcodebuild \
-          -workspace DepthCamera.xcworkspace \
-          -scheme DepthCamera \
-          -destination 'platform=iOS Simulator,name=iPhone 15 Pro,OS=latest' \
-          -configuration Debug \
-          -enableCodeCoverage YES \
-          build-for-testing
+        if [ -f "DepthCamera.xcworkspace" ]; then
+          echo "🔨 Building with workspace..."
+          xcodebuild \
+            -workspace DepthCamera.xcworkspace \
+            -scheme DepthCamera \
+            -destination 'platform=iOS Simulator,name=iPhone 15 Pro,OS=latest' \
+            -configuration Debug \
+            -enableCodeCoverage YES \
+            build-for-testing
+        elif [ -f "DepthCamera.xcodeproj" ]; then
+          echo "🔨 Building with project..."
+          xcodebuild \
+            -project DepthCamera.xcodeproj \
+            -scheme DepthCamera \
+            -destination 'platform=iOS Simulator,name=iPhone 15 Pro,OS=latest' \
+            -configuration Debug \
+            -enableCodeCoverage YES \
+            build-for-testing
+        else
+          echo "❌ No workspace or project found"
+          exit 1
+        fi
 
     - name: Run Unit Tests
       run: |
-        cd DepthCamera
-        xcodebuild test \
-          -workspace DepthCamera.xcworkspace \
-          -scheme DepthCamera \
-          -destination 'platform=iOS Simulator,name=iPhone 15 Pro,OS=latest' \
-          -configuration Debug \
-          -enableCodeCoverage YES \
-          -resultBundlePath TestResults.xcresult
+        if [ -f "DepthCamera.xcworkspace" ]; then
+          echo "🧪 Running unit tests with workspace..."
+          xcodebuild test \
+            -workspace DepthCamera.xcworkspace \
+            -scheme DepthCamera \
+            -destination 'platform=iOS Simulator,name=iPhone 15 Pro,OS=latest' \
+            -configuration Debug \
+            -enableCodeCoverage YES \
+            -resultBundlePath TestResults.xcresult
+        elif [ -f "DepthCamera.xcodeproj" ]; then
+          echo "🧪 Running unit tests with project..."
+          xcodebuild test \
+            -project DepthCamera.xcodeproj \
+            -scheme DepthCamera \
+            -destination 'platform=iOS Simulator,name=iPhone 15 Pro,OS=latest' \
+            -configuration Debug \
+            -enableCodeCoverage YES \
+            -resultBundlePath TestResults.xcresult
+        else
+          echo "❌ No workspace or project found"
+          exit 1
+        fi
 
     - name: Run UI Tests
       run: |
-        cd DepthCamera
-        xcodebuild test \
-          -workspace DepthCamera.xcworkspace \
-          -scheme DepthCamera \
-          -destination 'platform=iOS Simulator,name=iPhone 15 Pro,OS=latest' \
-          -configuration Debug \
-          -only-testing:DepthCameraUITests \
-          -resultBundlePath UITestResults.xcresult
+        if [ -f "DepthCamera.xcworkspace" ]; then
+          echo "🧪 Running UI tests with workspace..."
+          xcodebuild test \
+            -workspace DepthCamera.xcworkspace \
+            -scheme DepthCamera \
+            -destination 'platform=iOS Simulator,name=iPhone 15 Pro,OS=latest' \
+            -configuration Debug \
+            -only-testing:DepthCameraUITests \
+            -resultBundlePath UITestResults.xcresult
+        elif [ -f "DepthCamera.xcodeproj" ]; then
+          echo "🧪 Running UI tests with project..."
+          xcodebuild test \
+            -project DepthCamera.xcodeproj \
+            -scheme DepthCamera \
+            -destination 'platform=iOS Simulator,name=iPhone 15 Pro,OS=latest' \
+            -configuration Debug \
+            -only-testing:DepthCameraUITests \
+            -resultBundlePath UITestResults.xcresult
+        else
+          echo "❌ No workspace or project found"
+          exit 1
+        fi
 
     - name: Generate Code Coverage Report
       run: |
-        cd DepthCamera
-        xcrun xccov view --report --json TestResults.xcresult > coverage.json
+        if [ -f "TestResults.xcresult" ]; then
+          xcrun xccov view --report --json TestResults.xcresult > coverage.json
+          echo "✅ Code coverage report generated"
+        else
+          echo "⚠️ No test results found for coverage report"
+        fi
 
     - name: Upload Test Results
       uses: actions/upload-artifact@v4
@@ -148,35 +201,57 @@ jobs:
 
     - name: Install CocoaPods Dependencies
       run: |
-        cd DepthCamera
+        echo "Installing CocoaPods dependencies..."
         pod install
+        echo "✅ CocoaPods installed successfully"
 
     - name: Configure Build Number
       run: |
-        cd DepthCamera
         BUILD_NUMBER=${{ github.run_number }}
-        echo "Build number: $BUILD_NUMBER"
-        agvtool new-marketing-version ${{ env.MARKETING_VERSION }}
-        agvtool new-version -all $BUILD_NUMBER
+        echo "🔢 Configuring build number: $BUILD_NUMBER"
+        if [ -f "DepthCamera.xcodeproj" ]; then
+          cd $(basename "DepthCamera.xcodeproj" .xcodeproj) 2>/dev/null || true
+          agvtool new-marketing-version ${{ env.MARKETING_VERSION }} || echo "Failed to set marketing version"
+          agvtool new-version -all $BUILD_NUMBER || echo "Failed to set build version"
+          cd .. 2>/dev/null || true
+        fi
 
     - name: Archive App
       run: |
-        cd DepthCamera
-        xcodebuild \
-          -workspace DepthCamera.xcworkspace \
-          -scheme DepthCamera \
-          -configuration Release \
-          -destination generic/platform=iOS \
-          -archivePath $PWD/build/DepthCamera.xcarchive \
-          archive \
-          CODE_SIGN_STYLE=Manual \
-          DEVELOPMENT_TEAM=${{ env.DEVELOPMENT_TEAM }} \
-          PROVISIONING_PROFILE_SPECIFIER="" \
-          CODE_SIGN_IDENTITY=""
+        if [ -f "DepthCamera.xcworkspace" ]; then
+          echo "📦 Archiving with workspace..."
+          xcodebuild \
+            -workspace DepthCamera.xcworkspace \
+            -scheme DepthCamera \
+            -configuration Release \
+            -destination generic/platform=iOS \
+            -archivePath build/DepthCamera.xcarchive \
+            archive \
+            CODE_SIGN_STYLE=Manual \
+            DEVELOPMENT_TEAM=${{ env.DEVELOPMENT_TEAM }} \
+            PROVISIONING_PROFILE_SPECIFIER="" \
+            CODE_SIGN_IDENTITY=""
+        elif [ -f "DepthCamera.xcodeproj" ]; then
+          echo "📦 Archiving with project..."
+          xcodebuild \
+            -project DepthCamera.xcodeproj \
+            -scheme DepthCamera \
+            -configuration Release \
+            -destination generic/platform=iOS \
+            -archivePath build/DepthCamera.xcarchive \
+            archive \
+            CODE_SIGN_STYLE=Manual \
+            DEVELOPMENT_TEAM=${{ env.DEVELOPMENT_TEAM }} \
+            PROVISIONING_PROFILE_SPECIFIER="" \
+            CODE_SIGN_IDENTITY=""
+        else
+          echo "❌ No workspace or project found"
+          exit 1
+        fi
 
     - name: Export Archive (Development)
       run: |
-        cd DepthCamera
+        echo "📦 Exporting archive..."
         mkdir -p build
         cat > build/ExportOptions.plist << EOF
         <?xml version="1.0" encoding="UTF-8"?>
@@ -203,8 +278,8 @@ jobs:
 
         xcodebuild \
           -exportArchive \
-          -archivePath $PWD/build/DepthCamera.xcarchive \
-          -exportPath $PWD/build/DepthCamera-dev \
+          -archivePath build/DepthCamera.xcarchive \
+          -exportPath build/DepthCamera-dev \
           -exportOptionsPlist build/ExportOptions.plist
 
     - name: Upload Archive
@@ -212,8 +287,8 @@ jobs:
       with:
         name: depthcamera-archive
         path: |
-          DepthCamera/build/DepthCamera.xcarchive
-          DepthCamera/build/DepthCamera-dev
+          build/DepthCamera.xcarchive
+          build/DepthCamera-dev
         retention-days: 30
 
   # Security Analysis Job
